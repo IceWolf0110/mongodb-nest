@@ -143,17 +143,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         p1Name: 'Player 1',
         p2Name: 'Player 2',
       });
-      console.log(
-        `Result: ${result}, Player 1: ${this.choiceToString(p1.choice)}, Player 2: ${this.choiceToString(p2.choice)}`,
+      this.server.emit(
+        'gameReset',
+        `Result: ${result}, Player 1: ${this.choiceToString(p1.choice)}, Player 2: ${this.choiceToString(p2.choice)}. Please join to start a new game.`,
       );
       this.players.forEach((p) => {
         p.choice = 0;
         p.joined = false;
       });
-      this.server.emit(
-        'gameReset',
-        'Game finished. Please join to start a new game.',
-      );
       this.server.emit('playersUpdate', {
         playersCount: this.players.length,
         joinedCount: this.players.filter((p) => p.joined).length,
