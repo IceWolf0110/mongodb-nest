@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './User/users.module';
+import { GameModule } from './game/game.module';
 
 @Module({
   imports: [
@@ -8,8 +9,8 @@ import { UsersModule } from './User/users.module';
       'mongodb+srv://son:01102000@cluster0.x2tjjoh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
     ),
     UsersModule,
+    GameModule,
   ],
-  controllers: [],
-  providers: [],
 })
+
 export class AppModule {}
