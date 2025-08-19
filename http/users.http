@@ -2,5 +2,5 @@ POST {{host}}/users
 Content-Type: application/json
 
 {
-  "username": "hello"
+  "username": "hi"
 }
