@@ -1,165 +1,182 @@
 <script setup lang="ts">
-  import { ref, onMounted, onUnmounted } from 'vue';
-  import io from 'socket.io-client';
+import { ref, onMounted, onUnmounted } from 'vue';
+import io from 'socket.io-client';
 
-  const socket = io('http://localhost:3000');
-  const message = ref('');
-  const choice = ref(0);
-  const result = ref('');
-  const playersCount = ref(0);
-  const joinedCount = ref(0);
-  const joined = ref(false);
-  const startTime = ref(0);
-  const timeLeft = ref(0);
-  const TIMEOUT_DURATION = 30000; // 30 seconds
+// Kết nối tới server WebSocket
+const socket = io('http://localhost:3000');
+// Thông báo trạng thái trò chơi
+const message = ref('');
+// Lựa chọn của người chơi (0=không chọn, 1=Búa, 2=Kéo, 3=Bao)
+const choice = ref(0);
+// Chuỗi kết quả trò chơi
+const result = ref('');
+// Số người chơi hiện tại
+const playersCount = ref(0);
+// Số người chơi đã tham gia
+const joinedCount = ref(0);
+// Trạng thái tham gia của người chơi
+const joined = ref(false);
+// Dữ liệu kết quả để hiển thị trong card
+const resultData = ref<{
+  p1Name: string;
+  p1ChoiceText: string;
+  p2Name: string;
+  p2ChoiceText: string;
+  result: string;
+} | null>(null);
 
-  // Cập nhật bộ đếm với requestAnimationFrame
-  let animationFrameId: number | null = null;
-  const startTimer = () => {
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-    if (startTime.value === 0 || joinedCount.value < 2 || !joined.value) {
-      timeLeft.value = 0;
-      return;
+// Khi component được gắn vào
+onMounted(() => {
+  // Xử lý sự kiện kết nối
+  socket.on('connected', (data: { playerId: string; playersCount: number }) => {
+    playersCount.value = data.playersCount;
+    joined.value = false;
+    message.value = 'Đã kết nối! Vui lòng tham gia trò chơi.';
+    result.value = '';
+    resultData.value = null;
+    console.log(`Đã kết nối: ID Người chơi ${data.playerId}, Số người chơi: ${data.playersCount}/2`);
+  });
+
+  // Xử lý sự kiện tham gia trò chơi
+  socket.on('joined', (data: { playerId: string; playersCount: number }) => {
+    playersCount.value = data.playersCount;
+    joined.value = true;
+    message.value = joinedCount.value < 2 ? 'Đang chờ người chơi khác tham gia...' : 'Trò chơi bắt đầu! Chọn nước đi của bạn.';
+    console.log(`Đã tham gia: ID Người chơi ${data.playerId}, Số người chơi: ${data.playersCount}/2`);
+  });
+
+  // Cập nhật số người chơi và trạng thái tham gia
+  socket.on('playersUpdate', (data: { playersCount: number; joinedCount: number }) => {
+    playersCount.value = data.playersCount;
+    joinedCount.value = data.joinedCount;
+    console.log(`Nhận playersUpdate: ${data.playersCount}/2, Đã tham gia: ${data.joinedCount}/2`);
+    if (joined.value && joinedCount.value < 2) {
+      message.value = 'Đang chờ người chơi khác tham gia...';
+      result.value = '';
+      resultData.value = null;
     }
+  });
 
-    const updateTimer = () => {
-      const elapsed = Date.now() - startTime.value;
-      timeLeft.value = Math.max(0, Math.floor((TIMEOUT_DURATION - elapsed) / 1000));
-      console.log(`Timer tick: ${timeLeft.value}s`); // Debug
-      if (timeLeft.value > 0) {
-        animationFrameId = requestAnimationFrame(updateTimer);
-      } else {
-        animationFrameId = null;
-      }
+  // Bắt đầu trò chơi
+  socket.on('gameStart', (data: { message: string }) => {
+    message.value = data.message;
+    console.log('Trò chơi bắt đầu');
+  });
+
+  // Xác nhận lựa chọn của người chơi
+  socket.on('choiceMade', (msg: string) => {
+    message.value = msg;
+    console.log(`Lựa chọn đã gửi: ${msg}`);
+  });
+
+  // Hiển thị kết quả trò chơi
+  socket.on('result', (data: {
+    p1Choice: number;
+    p2Choice: number;
+    result: string;
+    p1ChoiceText: string;
+    p2ChoiceText: string;
+    p1Name: string;
+    p2Name: string;
+  }) => {
+    result.value = `${data.p1Name} (${data.p1ChoiceText}) vs ${data.p2Name} (${data.p2ChoiceText}). ${data.result}`;
+    resultData.value = {
+      p1Name: data.p1Name,
+      p1ChoiceText: data.p1ChoiceText,
+      p2Name: data.p2Name,
+      p2ChoiceText: data.p2ChoiceText,
+      result: data.result,
     };
-
-    animationFrameId = requestAnimationFrame(updateTimer);
-  };
-
-  onMounted(() => {
-    socket.on('connected', (data: { playerId: string; playersCount: number }) => {
-      playersCount.value = data.playersCount;
-      joined.value = false;
-      message.value = 'Connected! Please join the game.';
-      startTime.value = 0;
-      timeLeft.value = 0;
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      console.log(`Connected: Player ID ${data.playerId}, Players: ${data.playersCount}/2`);
-    });
-
-    socket.on('joined', (data: { playerId: string; playersCount: number }) => {
-      playersCount.value = data.playersCount;
-      joined.value = true;
-      message.value = joinedCount.value < 2 ? 'Waiting for another player to join...' : 'Game started! Choose your move within 30 seconds.';
-      console.log(`Joined: Player ID ${data.playerId}, Players: ${data.playersCount}/2`);
-    });
-
-    socket.on('playersUpdate', (data: { playersCount: number; joinedCount: number }) => {
-      playersCount.value = data.playersCount;
-      joinedCount.value = data.joinedCount;
-      console.log(`PlayersUpdate received: ${data.playersCount}/2, Joined: ${data.joinedCount}/2`);
-      if (joined.value && joinedCount.value < 2) {
-        message.value = 'Waiting for another player to join...';
-        startTime.value = 0;
-        timeLeft.value = 0;
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      }
-    });
-
-    socket.on('gameStart', (data: { message: string; startTime: number }) => {
-      message.value = data.message;
-      startTime.value = data.startTime;
-      timeLeft.value = Math.floor(TIMEOUT_DURATION / 1000);
-      startTimer();
-      console.log(`Game started, Start time: ${data.startTime}`);
-    });
-
-    socket.on('choiceMade', (msg: string) => {
-      message.value = msg;
-      console.log(`Choice made: ${msg}`);
-    });
-
-    socket.on('result', (data: {
-      p1Choice: number;
-      p2Choice: number;
-      result: string;
-      p1ChoiceText: string;
-      p2ChoiceText: string;
-      p1Name: string;
-      p2Name: string;
-    }) => {
-      result.value = `${data.p1Name} (${data.p1ChoiceText}) vs ${data.p2Name} (${data.p2ChoiceText}). ${data.result}`;
-      joined.value = false;
-      startTime.value = 0;
-      timeLeft.value = 0;
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      console.log(`Result: ${result.value}`);
-    });
-
-    socket.on('playerLeft', (data: { playersCount: number; joinedCount: number; playerId?: string }) => {
-      playersCount.value = data.playersCount;
-      joinedCount.value = data.joinedCount;
-      joined.value = false;
-      message.value = 'A player left. Please join the game again.';
-      result.value = '';
-      choice.value = 0;
-      startTime.value = 0;
-      timeLeft.value = 0;
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      console.log(`PlayerLeft: Players: ${data.playersCount}/2, Joined: ${data.joinedCount}/2, Disconnected ID: ${data.playerId || 'unknown'}`);
-    });
-
-    socket.on('gameReset', (msg: string) => {
-      message.value = msg;
-      result.value = '';
-      choice.value = 0;
-      joined.value = false;
-      startTime.value = 0;
-      timeLeft.value = 0;
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      console.log('Game reset');
-    });
-
-    socket.on('error', (msg: string) => {
-      message.value = msg;
-      console.log(`Error: ${msg}`);
-    });
+    joined.value = false;
+    console.log(`Kết quả: ${result.value}`);
   });
 
-  onUnmounted(() => {
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  // Xử lý khi người chơi rời
+  socket.on('playerLeft', (data: { playersCount: number; joinedCount: number; playerId?: string }) => {
+    playersCount.value = data.playersCount;
+    joinedCount.value = data.joinedCount;
+    joined.value = false;
+    message.value = 'Một người chơi đã rời. Vui lòng tham gia lại trò chơi.';
+    console.log(`Người chơi rời: Số người chơi: ${data.playersCount}/2, Đã tham gia: ${data.joinedCount}/2, ID Ngắt kết nối: ${data.playerId || 'không xác định'}`);
   });
 
-  const joinGame = () => {
-    socket.emit('joinGame');
-    console.log('Join game requested');
-  };
+  // Reset trò chơi
+  socket.on('gameReset', (msg: string) => {
+    result.value = msg;
+    if (msg.includes('Người chơi 1 thắng') || msg.includes('Người chơi 2 thắng') || msg.includes('Hòa')) {
+      const [p1Part, p2Part, resultText] = msg.split(' vs ').flatMap(s => s.split('. '));
+      const p1Match = p1Part.match(/Người chơi 1 \((.*?)\)/);
+      const p2Match = p2Part.match(/Người chơi 2 \((.*?)\)/);
+      resultData.value = {
+        p1Name: 'Người chơi 1',
+        p1ChoiceText: p1Match ? p1Match[1] : 'Không chọn',
+        p2Name: 'Người chơi 2',
+        p2ChoiceText: p2Match ? p2Match[1] : 'Không chọn',
+        result: resultText,
+      };
+    } else {
+      resultData.value = null;
+    }
+    message.value = 'Vui lòng tham gia để bắt đầu ván mới.';
+    choice.value = 0;
+    joined.value = false;
+    console.log(`Reset trò chơi: ${msg}`);
+  });
 
-  const makeChoice = (opt: number) => {
-    if (playersCount.value < 2 || joinedCount.value < 2) {
-      message.value = 'Wait for 2 players to join!';
-      console.log('Cannot make choice: Waiting for 2 joined players');
-      return;
-    }
-    if (!joined.value) {
-      message.value = 'Please join the game first!';
-      console.log('Cannot make choice: Not joined');
-      return;
-    }
-    choice.value = opt;
-    socket.emit('makeChoice', opt);
-    console.log(`Choice sent: ${opt}`);
-  };
+  // Xử lý lỗi
+  socket.on('error', (msg: string) => {
+    message.value = msg;
+    console.log(`Lỗi: ${msg}`);
+  });
+});
+
+// Ngắt kết nối khi component bị hủy
+onUnmounted(() => {
+  socket.disconnect();
+});
+
+// Hàm tham gia trò chơi
+const joinGame = () => {
+  socket.emit('joinGame');
+  result.value = '';
+  resultData.value = null;
+  console.log('Yêu cầu tham gia trò chơi');
+};
+
+// Hàm chọn nước đi
+const makeChoice = (opt: number) => {
+  if (playersCount.value < 2 || joinedCount.value < 2) {
+    message.value = 'Chờ đủ 2 người chơi tham gia!';
+    console.log('Không thể chọn: Đang chờ 2 người chơi tham gia');
+    return;
+  }
+  if (!joined.value) {
+    message.value = 'Vui lòng tham gia trò chơi trước!';
+    console.log('Không thể chọn: Chưa tham gia');
+    return;
+  }
+  choice.value = opt;
+  socket.emit('makeChoice', opt);
+  console.log(`Lựa chọn đã gửi: ${opt}`);
+};
+
+// Lấy lớp CSS cho card kết quả
+const getResultClass = () => {
+  if (!resultData.value) return '';
+  if (resultData.value.result.includes('thắng')) return 'bg-green-100 dark:bg-green-900 border-green-500 dark:border-green-400';
+  if (resultData.value.result === 'Hòa') return 'bg-blue-100 dark:bg-blue-900 border-blue-500 dark:border-blue-400';
+  return 'bg-gray-100 dark:bg-gray-700 border-gray-500 dark:border-gray-400';
+};
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-      <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Kéo Búa Bao Game</h1>
-      <p class="text-lg text-center text-gray-600 mb-4">
-        Players: {{ playersCount }}/2 (Joined: {{ joinedCount }}/2)
+  <div class="min-h-screen bg-gray-100 dark:bg-gray-800 flex items-center justify-center transition-colors duration-300">
+    <div class="bg-white dark:bg-gray-900 p-8 rounded-lg shadow-lg max-w-md w-full transition-colors duration-300">
+      <h1 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-100 mb-6">Trò Chơi Kéo Búa Bao</h1>
+      <p class="text-lg text-center text-gray-600 dark:text-gray-200 mb-4">
+        Người chơi: {{ playersCount }}/2 (Đã tham gia: {{ joinedCount }}/2)
       </p>
-      <p class="text-center text-gray-600 mb-6">{{ message }}</p>
+      <p class="text-center text-gray-600 dark:text-gray-200 mb-6">{{ message }}</p>
       <div v-if="!joined" class="text-center">
         <button
           @click="joinGame"
@@ -173,22 +190,48 @@
           @click="makeChoice(1)"
           class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300"
         >
-          Búa (Rock)
+          Búa
         </button>
         <button
           @click="makeChoice(2)"
           class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300"
         >
-          Kéo (Scissors)
+          Kéo
         </button>
         <button
           @click="makeChoice(3)"
           class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300"
         >
-          Bao (Paper)
+          Bao
         </button>
       </div>
-      <p v-if="result" class="text-center text-lg text-gray-800 font-semibold">{{ result }}</p>
+      <div v-if="resultData" class="mt-6 p-4 border-2 rounded-lg shadow-sm animate-pulse-short" :class="getResultClass">
+        <div class="flex justify-between items-center mb-2">
+          <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            {{ resultData.p1Name }}: {{ resultData.p1ChoiceText }}
+          </p>
+          <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            {{ resultData.p2Name }}: {{ resultData.p2ChoiceText }}
+          </p>
+        </div>
+        <p
+          class="text-center text-lg font-bold"
+          :class="resultData.result.includes('thắng') ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'"
+        >
+          {{ resultData.result }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Hiệu ứng nhấp nháy ngắn */
+@keyframes pulse-short {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+.animate-pulse-short {
+  animation: pulse-short 1s ease-in-out;
+}
+</style>

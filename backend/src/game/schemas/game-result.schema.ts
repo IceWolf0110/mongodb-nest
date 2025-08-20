@@ -1,25 +1,28 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
+export type GameResultDocument = GameResult & Document;
+
 @Schema()
-export class GameResult extends Document {
-  @Prop({ type: Number, enum: [0, 1, 2, 3], default: 0 })
+export class GameResult {
+  // Lựa chọn của Người chơi 1 (1=Búa, 2=Kéo, 3=Bao)
+  @Prop({ type: Number, required: true, enum: [1, 2, 3] })
   p1Choice: number;
 
-  @Prop({ type: Number, enum: [0, 1, 2, 3], default: 0 })
+  // Lựa chọn của Người chơi 2 (1=Búa, 2=Kéo, 3=Bao)
+  @Prop({ type: Number, required: true, enum: [1, 2, 3] })
   p2Choice: number;
 
+  // Kết quả trò chơi
   @Prop({
     required: true,
-    enum: [
-      'Player 1 wins',
-      'Player 2 wins',
-      'Tie',
-      'Player 1 wins by default',
-      'Player 2 wins by default',
-    ],
+    enum: ['Người chơi 1 thắng', 'Người chơi 2 thắng', 'Hòa'],
   })
   result: string;
+
+  // Thời gian lưu kết quả
+  @Prop({ default: Date.now })
+  timestamp: Date;
 }
 
 export const GameResultSchema = SchemaFactory.createForClass(GameResult);
