@@ -10,7 +10,7 @@ import { GameResult, GameResultSchema } from './schemas/game-result.schema';
       { name: GameResult.name, schema: GameResultSchema },
     ]),
     MongooseModule.forRoot(
-      'mongodb+srv://son:01102000@cluster0.x2tjjoh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+      'mongodb://mongo:feYdcYfxITYZCJpSpDQyvPUKwjZphdXf@yamanote.proxy.rlwy.net:28577',
     ),
   ],
   providers: [GameGateway, GameService],
