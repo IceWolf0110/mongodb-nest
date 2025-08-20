@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import io from 'socket.io-client';
 
 // Kết nối tới server WebSocket
-const socket = io('http://localhost:3000');
+const socket = io('https://game-backend-production-e85e.up.railway.app');
 // Thông báo trạng thái trò chơi
 const message = ref('');
 // Lựa chọn của người chơi (0=không chọn, 1=Búa, 2=Kéo, 3=Bao)
