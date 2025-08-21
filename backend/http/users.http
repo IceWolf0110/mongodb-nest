@@ -1,6 +1,0 @@
-POST {{host}}/users
-Content-Type: application/json
-
-{
-  "username": "hi"
-}

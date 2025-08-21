@@ -1,0 +1,121 @@
+Báo cáo cấu trúc dự án
+
+1. Tổng quan dự án
+
+Dự án được xây dựng với mục tiêu phát triển một ứng dụng web hiện đại, hiệu suất cao, sử dụng NestJS làm backend, Vue.js làm frontend, kết nối với cơ sở dữ liệu MongoDB thông qua Mongoose. Ứng dụng sử dụng WebSocket để hỗ trợ tương tác thời gian thực giữa client và server. Mã nguồn được lưu trữ trên GitHub và triển khai tự động lên nền tảng Railway.
+
+Cấu trúc dự án được thiết kế theo mô hình phân tầng (layered architecture), đảm bảo tính mô-đun hóa, dễ bảo trì và mở rộng. Dưới đây là mô tả chi tiết về cấu trúc, công nghệ và quy trình triển khai.
+
+2. Công nghệ sử dụng
+
+2.1. Backend: NestJS
+
+NestJS: Framework Node.js mạnh mẽ, hỗ trợ TypeScript, giúp tổ chức mã nguồn theo mô hình MVC (Model-View-Controller) hoặc mô-đun hóa theo tính năng.
+
+Mongoose: Thư viện ODM (Object Data Modeling) để kết nối và thao tác với MongoDB, cung cấp schema validation và query builder.
+
+WebSocket: Sử dụng thư viện @nestjs/websockets và socket.io để xử lý giao tiếp thời gian thực giữa backend và frontend.
+
+2.2. Frontend: Vue.js
+
+Vue.js: Framework JavaScript nhẹ, linh hoạt, được sử dụng để xây dựng giao diện người dùng tương tác.
+
+Vue Router: Quản lý định tuyến phía client.
+
+Pinia: Thư viện quản lý trạng thái (state management) thay thế cho Vuex.
+
+Socket.io-client: Kết nối WebSocket từ phía client để giao tiếp với backend.
+
+2.3. Cơ sở dữ liệu: MongoDB
+
+MongoDB được chọn làm cơ sở dữ liệu NoSQL để lưu trữ dữ liệu linh hoạt, phù hợp với các ứng dụng yêu cầu schema động.
+
+Mongoose đảm bảo dữ liệu được định dạng theo schema, hỗ trợ kiểm tra dữ liệu trước khi lưu.
+
+2.4. Lưu trữ mã nguồn: GitHub
+
+GitHub được sử dụng làm nền tảng quản lý mã nguồn, hỗ trợ version control và cộng tác nhóm.
+
+Quy trình CI/CD được tích hợp thông qua GitHub Actions để tự động hóa kiểm tra mã và triển khai.
+
+2.5. Triển khai: Railway
+
+Railway: Nền tảng triển khai ứng dụng đơn giản, hỗ trợ cả backend và frontend, tích hợp tốt với MongoDB và các dịch vụ khác.
+
+Hỗ trợ triển khai containerized thông qua Docker.
+
+3. Cấu trúc thư mục dự án
+
+Dự án được chia thành hai thư mục chính: backend và frontend. Dưới đây là cấu trúc chi tiết:
+
+3.1. Backend (NestJS)
+
+backend/
+├── src/
+│   ├── game/
+│   │   ├── schemas/       (chứa định nghĩa schema cho các collection MongoDB)
+│   │   │   └── game-result.schema.ts  (định nghĩa schema cho collection gameresults)
+│   │   ├── game.gateway.spec.ts    (file test cho WebSocket gateway)
+│   │   ├── game.gateway.ts         (xử lý logic WebSocket cho module game)
+│   │   ├── game.module.ts          (module NestJS định nghĩa các thành phần của module game)
+│   │   ├── game.service.spec.ts    (file test đơn vị cho service game)
+│   │   └── game.service.ts         (chứa logic nghiệp vụ, tương tác với MongoDB qua Mongoose)
+│   ├── app.module.ts      (module gốc, nhập các module và cấu hình toàn cục)
+│   ├── main.ts            (điểm khởi chạy ứng dụng, cấu hình NestFactory)
+│   └── test/              (chứa các file test, ví dụ game.e2e-spec.ts và jest.config.ts)
+│       ├── game.e2e-spec.ts        (test end-to-end cho module game)
+│       └── jest.config.ts          (cấu hình Jest cho unit test)
+├── .gitignore             (xác định file/thư mục không được commit, ví dụ node_modules)
+├── .prettierrc            (cấu hình định dạng mã nguồn với Prettier)
+├── .eslintrc.mjs          (cấu hình linting mã nguồn với ESLint)
+├── nest-cli.json          (cấu hình công cụ CLI của NestJS, như build path)
+├── package.json           (quản lý dependencies và script của backend)
+├── README.md              (tài liệu hướng dẫn sử dụng dự án)
+├── tsconfig.build.json    (cấu hình TypeScript cho quá trình build)
+└── tsconfig.json          (cấu hình TypeScript cho quá trình phát triển)
+
+3.2. Frontend (Vue.js)
+
+frontend/
+├── node_modules/          (chứa các thư viện phụ thuộc của frontend, được cài riêng)
+├── public/                (chứa tài nguyên tĩnh như index.html)
+│   └── favicon.ico        (file icon web)
+├── src/
+│   ├── router/            (chứa định nghĩa route, ví dụ index.ts)
+│   ├── App.vue            (thành phần gốc của giao diện Vue.js)
+│   ├── main.ts            (điểm khởi chạy ứng dụng Vue.js, kết nối với DOM)
+│   └── style.css          (tệp CSS chính, tích hợp Tailwind CSS)
+├── .editorconfig          (cấu hình định dạng mã nguồn cho các trình soạn thảo)
+├── .gitattributes         (định nghĩa thuộc tính file cho Git)
+├── .gitignore             (xác định file/thư mục không được commit)
+├── .prettierrc.json       (cấu hình định dạng mã nguồn với Prettier)
+├── env.d.ts               (khai báo kiểu cho biến môi trường TypeScript)
+├── eslintrc.config.ts     (cấu hình linting mã nguồn với ESLint)
+├── index.html             (file HTML gốc, điểm nhập của ứng dụng)
+├── package.json           (quản lý dependencies và script của frontend)
+├── package-lock.json      (khóa phiên bản các dependencies)
+├── README.md              (tài liệu hướng dẫn sử dụng dự án)
+├── tsconfig.app.json      (cấu hình TypeScript cho ứng dụng)
+├── tsconfig.json          (cấu hình TypeScript chung)
+├── tsconfig.node.json     (cấu hình TypeScript cho môi trường Node)
+└── vite.config.ts         (cấu hình build và phát triển với Vite)
+
+4. Tương tác WebSocket
+
+Backend: game.gateway.ts xử lý websocket, định nghĩa sự kiện thời gian thực.
+
+Frontend: Kết nối với backend qua socket.io-client.
+
+5. Quy trình triển khai
+
+5.1. Lưu trữ mã nguồn trên GitHub
+
+Hiện tại đang sử dụng nhánh main để lưu trữ cả hai phía backend và frontend nhằm thuận tiện cho việc quản lý code.
+
+5.2. Triển khai trên Railway
+
+Triển khai 3 container cho frontend, backend và database
+
+Frontend và backend được railway tự động rebuild mỗi khi code mới được đẩy lên github
+
+Railway tự cho phép tạo domain cho cả frontend lẫn backend để có thể truy cập public.
